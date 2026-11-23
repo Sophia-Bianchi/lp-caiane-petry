@@ -1,11 +1,44 @@
 import { useEffect, useState, type CSSProperties, type MouseEvent } from "react";
 import "./App.css";
-import { Abertura } from "./components/Abertura";
+import { LogoMark, LogoWordmark, WhatsAppButtonIcon } from "./components/Icons";
+import {
+  SmoothScroll,
+  getLenis,
+  pauseScroll,
+  resumeScroll,
+  scrollToY,
+} from "./components/SmoothScroll";
+import { useTitleReveal } from "./components/TitleReveal";
+import { BeautyDots } from "./components/BeautyDots";
+import { EntrancePlus } from "./interactions/EntrancePlus";
+import { MotionPlus } from "./interactions/MotionPlus";
+import "./interactions/motion-plus.css";
+
+import { CSS_SCROLL_FX, unclipAncestors } from "./scrollFx";
+import { EVENTO_ABERTURA } from "./interactions/eventos";
+import {
+  BlogArticlePage,
+  BlogCard,
+  BlogListPage,
+  blogPosts,
+} from "./components/BlogPages";
+
+export type Page = "home" | "privacidade" | "blog" | "artigo";
+
+
+// Rotas: /blog (listagem), /blog/:slug (artigo), #politica-de-privacidade.
+function pageFromLocation(): Page {
+  if (window.location.hash === "#politica-de-privacidade") return "privacidade";
+  const path = window.location.pathname.replace(/\/+$/, "");
+  if (path === "/blog") return "blog";
+  if (path.startsWith("/blog/")) return "artigo";
+  return "home";
+}
 import { Cookies } from "./components/Cookies";
 import { PoliticaPrivacidade } from "./components/PoliticaPrivacidade";
 import { Footer } from "./components/Footer";
 
-const ASSETS = "/assets/";
+const ASSETS = "/img/";
 
 const WHATSAPP_URL = "https://wa.me/5548991545528";
 
@@ -35,24 +68,6 @@ const formations = [
   },
 ];
 
-const blogPosts = [
-  {
-    category: "Infantil",
-    image: "Blog_IMG01.png",
-  },
-  {
-    category: "Bastidores",
-    image: "Blog_IMG02.JPG",
-  },
-  {
-    category: "Estética",
-    image: "Blog_IMG03.png",
-  },
-  {
-    category: "Tratamentos",
-    image: "Blog_IMG04.png",
-  },
-];
 
 type Treatment = {
   title: string;
@@ -64,29 +79,29 @@ type Treatment = {
 const treatments: Treatment[] = [
   {
     title: "Ortodontia",
-    image: "OrtodontiaIMG.png",
-    expandedImage: "OrtodontiaImgAberta.png",
+    image: "tratamento-ortodontia.webp",
+    expandedImage: "tratamento-ortodontia-aberta.webp",
     description:
       "Tratamentos ortodônticos para adolescentes e adultos, planejados a partir de um diagnóstico que considera não apenas a posição dos dentes, mas também função, oclusão, estética do sorriso e harmonia facial. Utilizamos recursos digitais avançados e diferentes possibilidades terapêuticas, incluindo Invisalign, buscando resultados precisos, naturais e estáveis.",
   },
   {
     title: "Ortopedia Funcional dos Maxilares",
-    image: "OrtodontiaDosMaxilaresPequena.png",
-    expandedImage: "OrtopediaFuncionalAberta.png",
+    image: "tratamento-ortopedia.webp",
+    expandedImage: "tratamento-ortopedia-aberta.webp",
     description:
       "Acompanhamos o desenvolvimento dentofacial de bebês, crianças e adolescentes com abordagens ortopédicas individualizadas, identificando e tratando precocemente alterações na face, arcadas e oclusão. Sem idade mínima: atendemos desde os primeiros meses de vida, incluindo bebês com síndrome de Down a partir dos 2 meses.",
   },
   {
     title: "Refinamento Estético do Sorriso",
-    image: "RefinamentoEsteticoPequena.png",
-    expandedImage: "RefinamentoEsteticoAberta.png",
+    image: "tratamento-refinamento.webp",
+    expandedImage: "tratamento-refinamento-aberta.webp",
     description:
       "A plastia do sorriso vai além do alinhamento para devolver forma, proporção, função e naturalidade. Por meio de intervenções conservadoras em resina, aprimoramos contornos e pequenos detalhes que fazem diferença na harmonia do conjunto. Uma estética delicada e individualizada, que preserva a estrutura dental para valorizar o que já é naturalmente seu.",
   },
   {
     title: "Profilaxia & Prevenção",
-    image: "ProfilaxiaPequena.png",
-    expandedImage: "ProfilaxiaAberta.png",
+    image: "tratamento-profilaxia.webp",
+    expandedImage: "tratamento-profilaxia-aberta.webp",
     description:
       "Saúde e cuidado para preservar resultados ao longo da vida. Mais do que uma limpeza profissional, a profilaxia une prevenção e avaliação periódica com o apoio da tecnologia. Assim, identificamos alterações precocemente para proteger dentes, gengivas e a longevidade dos tratamentos estéticos e ortodônticos.",
   },
@@ -96,7 +111,6 @@ type DiagnosisStep = {
   title: string;
   description: string;
   image: string;
-  fallbacks?: string[];
   backgroundColor: string;
 };
 
@@ -105,58 +119,31 @@ const diagnosisSteps: DiagnosisStep[] = [
     title: "Diagnóstico personalizado",
     description:
       "Tudo começa por uma avaliação criteriosa. Analisamos proporções, função, oclusão, relação dos dentes com a face e o potencial de crescimento, quando indicado. É esse entendimento que define o caminho, e não o contrário.",
-    image: "Diagnostico.png",
+    image: "diag-personalizado.webp",
     backgroundColor: "#2D3945",
   },
   {
     title: "Planejamento digital",
     description:
       "O planejamento digital permite visualizar o tratamento antes de iniciá-lo, tornando o processo mais previsível, preciso e transparente para o paciente.",
-    image: "Blog_IMG02.JPG",
+    image: "diag-planejamento.webp",
     backgroundColor: "#665E54",
   },
   {
     title: "Tecnologia",
     description:
       "Recursos como iTero 5D, planejamento digital, fotografia clínica e Invisalign permitem tratamentos cada vez mais precisos, previsíveis e minimamente invasivos.",
-    image: "IMG_8457.JPG",
+    image: "diag-tecnologia.webp",
     backgroundColor: "#5A6B7B",
   },
   {
     title: "Naturalidade e precisão",
     description:
       "A tecnologia está a serviço de um resultado que respeita a anatomia e a individualidade de cada paciente. Nosso objetivo é um sorriso que funcione bem, seja elegante e pareça sempre ter sido seu.",
-    image: "Naturalidade.png",
-    fallbacks: ["NaturalidadePrecisao.png", "GeraBelezaSorriso.png"],
+    image: "diag-naturalidade.webp",
     backgroundColor: "#2D3945",
   },
 ];
-
-function buildAssetUrls(fileName: string, fallbacks: string[] = []): string[] {
-  const clean = fileName.trim();
-  const dotIndex = clean.lastIndexOf(".");
-  const base = dotIndex > 0 ? clean.slice(0, dotIndex) : clean;
-  const ext = dotIndex > 0 ? clean.slice(dotIndex) : ".png";
-
-  const urls: string[] = [
-    `${ASSETS}${clean}`,
-    `${ASSETS}${base}.png`,
-    `${ASSETS}${base}.jpg`,
-    `${ASSETS}${base}.JPG`,
-    `${ASSETS}${base}.jpeg`,
-    `${ASSETS}${base}.webp`,
-  ];
-
-  if (ext.toLowerCase() !== ext) {
-    urls.push(`${ASSETS}${base}${ext.toLowerCase()}`);
-  }
-
-  for (const fallback of fallbacks) {
-    urls.push(`${ASSETS}${fallback}`);
-  }
-
-  return Array.from(new Set(urls)).map((url) => encodeURI(url));
-}
 
 type AssetImageProps = {
   fileName: string;
@@ -167,39 +154,28 @@ type AssetImageProps = {
   dataParallax?: boolean;
   dataParallaxSpeed?: string;
   dataReveal?: boolean;
-  fallbacks?: string[];
 };
 
+// Imagens otimizadas (WebP, 2x) ficam em /public/img. Lazy por padrão:
+// só baixa quando a seção chega perto da tela.
 function AssetImage({
   fileName,
   alt,
   className,
   style,
-  loading = "eager",
+  loading = "lazy",
   dataParallax,
   dataParallaxSpeed,
   dataReveal,
-  fallbacks = [],
 }: AssetImageProps) {
-  const urls = buildAssetUrls(fileName, fallbacks);
-  const [urlIndex, setUrlIndex] = useState(0);
-
-  useEffect(() => {
-    setUrlIndex(0);
-  }, [fileName]);
-
-  const handleError = () => {
-    setUrlIndex((prev) => (prev + 1 < urls.length ? prev + 1 : prev));
-  };
-
   return (
     <img
-      src={urls[urlIndex]}
+      src={`${ASSETS}${fileName}`}
       alt={alt}
       className={className}
       style={style}
       loading={loading}
-      onError={handleError}
+      decoding="async"
       {...(dataParallax ? { "data-parallax": "" } : {})}
       {...(dataParallaxSpeed ? { "data-parallax-speed": dataParallaxSpeed } : {})}
       {...(dataReveal ? { "data-reveal": "" } : {})}
@@ -207,34 +183,98 @@ function AssetImage({
   );
 }
 
-function getParallaxOffset(element: HTMLElement, speed: number): number {
-  const rect = element.getBoundingClientRect();
-  const viewportHeight = window.innerHeight || 1;
-  const elementCenter = rect.top + rect.height / 2;
-  const distanceFromCenter = elementCenter - viewportHeight / 2;
-  const maxOffset = 32;
 
-  const rawOffset = -distanceFromCenter * speed;
-  return Math.max(-maxOffset, Math.min(maxOffset, rawOffset));
+// No mobile o Figma mostra os 4 tratamentos sempre abertos.
+function useIsMobile(query = "(max-width: 768px)") {
+  const [matches, setMatches] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia(query).matches : false,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const onChange = () => setMatches(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [query]);
+
+  return matches;
+}
+
+// Folga do parallax: a foto fica em scale 1.08 (4% de sobra de cada lado,
+// enquadramento quase igual ao Figma) e anda até 3,5% da altura. O fundo do
+// hero não tem essa folga de escala e mantém o deslocamento pela velocidade.
+function parallaxAmplitude(element: HTMLElement): number {
+  if (element.classList.contains("parallax-media-contain")) return 0.018;
+  if (element.classList.contains("parallax-media")) return 0.035;
+  return Math.min(0.09, Number(element.dataset.parallaxSpeed ?? "0.08") * 0.9);
+}
+
+function parallaxOffset(box: DOMRect, viewportHeight: number, amplitude: number): number {
+  const progress = Math.min(
+    1,
+    Math.max(0, (viewportHeight - box.top) / (viewportHeight + box.height)),
+  );
+  return (progress - 0.5) * 2 * amplitude * box.height;
 }
 
 function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
+
+  // menu mobile aberto trava o scroll suave por trás
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    pauseScroll();
+    return () => resumeScroll();
+  }, [isMenuOpen]);
+
   const [activeTreatment, setActiveTreatment] = useState<number>(0);
   const [manualSelectionUntil, setManualSelectionUntil] = useState<number>(0);
-  const [currentPage, setCurrentPage] = useState<"home" | "privacidade">(() =>
-    window.location.hash === "#politica-de-privacidade"
-      ? "privacidade"
-      : "home",
-  );
+  const [currentPage, setCurrentPage] = useState<Page>(pageFromLocation);
+  // camada de motion (entrada, fotos que abrem, listas, header) só na home
+  const isPlus = currentPage === "home";
+  useTitleReveal(currentPage);
+
+  // Depois da entrada, com o navegador ocioso, baixa e decodifica as fotos
+  // da página uma a uma: o primeiro contato com cada seção não paga mais o
+  // custo de decodificar a imagem no meio do scroll.
+  useEffect(() => {
+    let cancelled = false;
+    const idle = (fn: () => void) => {
+      if (typeof window.requestIdleCallback === "function") {
+        window.requestIdleCallback(fn, { timeout: 1500 });
+      } else {
+        setTimeout(fn, 200);
+      }
+    };
+
+    const warm = async () => {
+      const images = Array.from(document.querySelectorAll<HTMLImageElement>("img"));
+      for (const img of images) {
+        if (cancelled) return;
+        if (img.loading === "lazy") img.loading = "eager";
+        try {
+          await img.decode();
+        } catch {
+          /* imagem quebrada ou trocada: segue */
+        }
+      }
+    };
+
+    const start = () => idle(() => void warm());
+    if (document.documentElement.dataset.abertura === "pronta") start();
+    else window.addEventListener(EVENTO_ABERTURA, start, { once: true });
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener(EVENTO_ABERTURA, start);
+    };
+  }, [currentPage]);
 
   useEffect(() => {
     const syncRouteFromHash = () => {
-      setCurrentPage(
-        window.location.hash === "#politica-de-privacidade"
-          ? "privacidade"
-          : "home",
-      );
+      setCurrentPage(pageFromLocation());
     };
 
     window.addEventListener("hashchange", syncRouteFromHash);
@@ -246,7 +286,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (currentPage !== "home") return;
+    if (currentPage === "privacidade") return;
 
     const elements = Array.from(
       document.querySelectorAll<HTMLElement>("[data-reveal]"),
@@ -257,15 +297,15 @@ function App() {
       return;
     }
 
+    // primeiro mede tudo, depois marca (sem layout forçado a cada item)
     const revealVisibleElements = () => {
       const viewportHeight = window.innerHeight || 900;
-      elements.forEach((element) => {
-        if (element.classList.contains("is-visible")) return;
-        const rect = element.getBoundingClientRect();
-        if (rect.top <= viewportHeight + 120) {
-          element.classList.add("is-visible");
-        }
-      });
+      const due = elements.filter(
+        (element) =>
+          !element.classList.contains("is-visible") &&
+          element.getBoundingClientRect().top <= viewportHeight + 120,
+      );
+      due.forEach((element) => element.classList.add("is-visible"));
     };
 
     const observer = new IntersectionObserver(
@@ -286,65 +326,76 @@ function App() {
     elements.forEach((element) => observer.observe(element));
     revealVisibleElements();
 
-    window.addEventListener("scroll", revealVisibleElements, { passive: true });
-    window.addEventListener("resize", revealVisibleElements, { passive: true });
-
     return () => {
       observer.disconnect();
-      window.removeEventListener("scroll", revealVisibleElements);
-      window.removeEventListener("resize", revealVisibleElements);
     };
   }, [currentPage]);
 
   useEffect(() => {
-    if (currentPage !== "home") return;
+    if (currentPage === "privacidade") return;
 
-    const parallaxElements = Array.from(
-      document.querySelectorAll<HTMLElement>("[data-parallax]"),
-    );
+    const all = Array.from(document.querySelectorAll<HTMLElement>("[data-parallax]"));
+    if (all.length === 0) return;
 
-    if (parallaxElements.length === 0) return;
-
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-
-    if (prefersReducedMotion) {
-      parallaxElements.forEach((el) => {
-        el.style.setProperty("--parallax-y", "0px");
-      });
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      all.forEach((el) => el.style.setProperty("--parallax-y", "0px"));
       return;
     }
+
+    // com scroll-timeline nativo, as fotos ficam no CSS; o JS só cuida do
+    // fundo do hero (e no celular nem dele: lá o fundo é fixo)
+    if (CSS_SCROLL_FX) {
+      unclipAncestors(document.querySelectorAll<HTMLElement>(".parallax-media"));
+    }
+    const compact = () => window.innerWidth <= 768;
+    const handled = all.filter((el) => {
+      if (CSS_SCROLL_FX && el.classList.contains("parallax-media")) return false;
+      return true;
+    });
+    if (handled.length === 0) return;
+
+    // só mexe no que está perto da tela
+    const active = new Set<HTMLElement>();
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const el = entry.target as HTMLElement;
+          if (entry.isIntersecting) active.add(el);
+          else active.delete(el);
+        });
+        scheduleUpdate();
+      },
+      { rootMargin: "25% 0px 25% 0px" },
+    );
+    handled.forEach((el) => io.observe(el));
 
     let frameId = 0;
 
     const updateParallax = () => {
       frameId = 0;
-      const isCompactScreen = window.innerWidth <= 768;
-
-      parallaxElements.forEach((el) => {
-        const baseSpeed = Number(el.dataset.parallaxSpeed ?? "0.08");
-        const effectiveSpeed = isCompactScreen ? baseSpeed * 0.45 : baseSpeed;
-        const offset = getParallaxOffset(el, effectiveSpeed);
+      const viewportHeight = window.innerHeight || 1;
+      const isCompact = compact();
+      const items = Array.from(active).filter(
+        (el) => !(isCompact && el.classList.contains("hero-bg")),
+      );
+      // 1) lê todas as medidas  2) escreve todos os valores
+      const boxes = items.map((el) => (el.parentElement ?? el).getBoundingClientRect());
+      items.forEach((el, index) => {
+        const offset = parallaxOffset(boxes[index], viewportHeight, parallaxAmplitude(el));
         el.style.setProperty("--parallax-y", `${offset.toFixed(2)}px`);
       });
     };
 
-    const scheduleUpdate = () => {
-      if (!frameId) {
-        frameId = window.requestAnimationFrame(updateParallax);
-      }
-    };
-
-    updateParallax();
+    function scheduleUpdate() {
+      if (!frameId) frameId = window.requestAnimationFrame(updateParallax);
+    }
 
     window.addEventListener("scroll", scheduleUpdate, { passive: true });
     window.addEventListener("resize", scheduleUpdate, { passive: true });
 
     return () => {
-      if (frameId) {
-        window.cancelAnimationFrame(frameId);
-      }
+      io.disconnect();
+      if (frameId) window.cancelAnimationFrame(frameId);
       window.removeEventListener("scroll", scheduleUpdate);
       window.removeEventListener("resize", scheduleUpdate);
     };
@@ -416,7 +467,18 @@ function App() {
     closeMenu();
     setCurrentPage("privacidade");
     window.history.pushState(null, "", "#politica-de-privacidade");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollToY(0, false);
+  };
+
+  const navigateTo = (path: string, event?: MouseEvent<HTMLAnchorElement>) => {
+    if (event) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+      event.preventDefault();
+    }
+    closeMenu();
+    window.history.pushState(null, "", path);
+    setCurrentPage(pageFromLocation());
+    scrollToY(0, false);
   };
 
   const navigateToHomeSection = (
@@ -430,24 +492,33 @@ function App() {
 
     const scrollToTarget = () => {
       if (sectionHash === "#inicio") {
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        scrollToY(0);
+        return;
+      }
+      const target = document.querySelector<HTMLElement>(sectionHash);
+      if (!target) return;
+      const header = document.querySelector(".site-header")?.getBoundingClientRect().height ?? 64;
+      const lenis = getLenis();
+      if (lenis) {
+        lenis.scrollTo(target, { offset: -header, force: true });
       } else {
-        document.querySelector(sectionHash)?.scrollIntoView({ behavior: "smooth" });
+        target.scrollIntoView({ behavior: "smooth" });
       }
     };
 
     if (currentPage !== "home") {
       setCurrentPage("home");
-      window.history.pushState(null, "", sectionHash);
+      window.history.pushState(null, "", `/${sectionHash}`);
       window.setTimeout(scrollToTarget, 60);
       return;
     }
 
-    window.history.pushState(null, "", sectionHash);
+    window.history.pushState(null, "", `/${sectionHash}`);
     scrollToTarget();
   };
 
   const handleCardClick = (index: number) => {
+    if (isMobile) return;
     if (window.innerWidth <= 768) {
       setManualSelectionUntil(Date.now() + 900);
       setActiveTreatment((prev) => (prev === index ? -1 : index));
@@ -461,18 +532,21 @@ function App() {
 
   return (
     <div className="page-shell">
-      <Abertura />
+      <SmoothScroll />
+      {/* entrada montada uma única vez: trocar de tela nunca repete */}
+      <EntrancePlus />
+      {isPlus && <MotionPlus />}
 
       <header className="site-header">
         <div className="header-inner">
           <a
             className="brand"
-            href="#inicio"
+            href={"/#inicio"}
             aria-label="Caiane Petry - Início"
             onClick={(event) => navigateToHomeSection("#inicio", event)}
           >
-            <AssetImage fileName="Group.png" alt="" loading="eager" />
-            <span>CAIANE PETRY</span>
+            <LogoMark className="brand-mark" />
+            <LogoWordmark className="brand-wordmark" />
           </a>
 
           <nav
@@ -481,33 +555,32 @@ function App() {
             aria-label="Navegação principal"
           >
             <a
-              className={currentPage === "home" ? "active" : ""}
-              href="#inicio"
+              href={"/#inicio"}
               onClick={(event) => navigateToHomeSection("#inicio", event)}
             >
               Início
             </a>
             <a
-              href="#sobre"
+              href={"/#sobre"}
               onClick={(event) => navigateToHomeSection("#sobre", event)}
             >
               Sobre
             </a>
             <a
-              href="#tratamentos"
+              href={"/#tratamentos"}
               onClick={(event) => navigateToHomeSection("#tratamentos", event)}
             >
               Tratamentos
             </a>
             <a
-              href="#tecnologia"
+              href={"/#tecnologia"}
               onClick={(event) => navigateToHomeSection("#tecnologia", event)}
             >
               Tecnologia
             </a>
             <a
-              href="#blog"
-              onClick={(event) => navigateToHomeSection("#blog", event)}
+              href="/blog"
+              onClick={(event) => navigateTo("/blog", event)}
             >
               Blog
             </a>
@@ -557,6 +630,10 @@ function App() {
 
       {currentPage === "privacidade" ? (
         <PoliticaPrivacidade />
+      ) : currentPage === "blog" ? (
+        <BlogListPage onNavigate={navigateTo} />
+      ) : currentPage === "artigo" ? (
+        <BlogArticlePage onNavigate={navigateTo} />
       ) : (
         <main>
           <section className="hero" id="inicio">
@@ -570,18 +647,19 @@ function App() {
 
             <div className="hero-content">
               <h1>
-                Odontologia que une função, saúde e beleza em cada fase da vida.
+                Odontologia <br className="br-mobile" />
+                que une função, saúde e beleza em cada fase da vida.
               </h1>
 
               <p>
-                Ortodontia, ortopedia funcional dos maxilares e refinamento
-                estético do sorriso, conduzidos por um diagnóstico
+                Ortodontia, Ortopedia Funcional dos Maxilares e Refinamento
+                Estético do Sorriso, conduzidos por um diagnóstico
                 individualizado e recursos digitais avançados. O resultado que
                 buscamos não é apenas ter dentes alinhados, mas um sorriso
                 funcional, natural, elegante e integrado à face.
               </p>
 
-              <div className="hero-actions" data-reveal>
+              <div className="hero-actions">
                 <a
                   className="button button-dark"
                   href={WHATSAPP_URL}
@@ -593,7 +671,7 @@ function App() {
 
                 <a
                   className="button button-outline"
-                  href="#tratamentos"
+                  href={"/#tratamentos"}
                   onClick={(event) =>
                     navigateToHomeSection("#tratamentos", event)
                   }
@@ -609,7 +687,8 @@ function App() {
               <div className="about-left">
                 <div className="about-small-image" data-reveal>
                   <AssetImage
-                    fileName="GeraBelezaPedras.png"
+                    fileName="sobre-pedras.webp"
+                    loading="eager"
                     alt="Detalhe de pedras em composição natural"
                     className="parallax-media"
                     dataParallax
@@ -639,14 +718,15 @@ function App() {
                     relação com a face e aquilo que pode ser preservado,
                     desenvolvido ou aprimorado. Acreditamos que os melhores
                     resultados não são aqueles que parecem feitos, mas aqueles
-                    que parecem sempre ter pertencido àquela pessoa.
+                    que parecem sempre ter pertencido aquela pessoa.
                   </p>
                 </div>
               </div>
 
               <div className="about-large-image" data-reveal>
                 <AssetImage
-                  fileName="GeraBelezaSorriso.png"
+                  fileName="sobre-sorriso.webp"
+                    loading="eager"
                   alt="Sorriso natural em harmonia com a face"
                   className="parallax-media"
                   dataParallax
@@ -665,7 +745,9 @@ function App() {
               <div className="differential-list" data-reveal>
                 {differentials.map((item, index) => (
                   <div className="differential-row" key={item}>
-                    <span className="differential-number">[{index + 1}]</span>
+                    <span className="differential-number">
+                      [ {String(index + 1).padStart(2, "0")} ]
+                    </span>
                     <span>{item}</span>
                   </div>
                 ))}
@@ -674,15 +756,14 @@ function App() {
           </section>
 
           <section className="approach-feature" id="tecnologia">
-            <div className="approach-image">
+            <div className="approach-image" data-reveal>
               <AssetImage
-                fileName="OrtopediaFuncional.png"
+                fileName="abordagem-ortopedia.webp"
                 alt="Imagem ilustrativa de ortopedia funcional"
                 className="parallax-media parallax-media-contain"
                 dataParallax
                 dataParallaxSpeed="0.06"
                 style={parallaxStyle("0px")}
-                dataReveal
               />
             </div>
 
@@ -714,7 +795,7 @@ function App() {
           <section className="alignment-section">
             <div className="alignment-image" data-reveal>
               <AssetImage
-                fileName="AlinharDentes.png"
+                fileName="alinhar-dentes.webp"
                 alt="Imagem relacionada ao alinhamento dos dentes"
                 className="parallax-media"
                 dataParallax
@@ -739,6 +820,7 @@ function App() {
             <div className="treatments-intro" data-reveal>
               <h2>
                 Cuidado para cada
+                <br />
                 fase do sorriso.
               </h2>
               <p>
@@ -758,19 +840,7 @@ function App() {
               }}
             >
             {treatments.map((treatment, index) => {
-  const isOpen = activeTreatment === index;
-  const currentImage =
-    isOpen && treatment.expandedImage
-      ? treatment.expandedImage
-      : treatment.image;
-  const imageFallbacks = isOpen
-    ? [treatment.image]
-    : [
-        "OrtodontiaImgDesfocada.png",
-        "OrtopediaFuncionalDosMaxilares.png",
-        "RefinamentoEstetico.png",
-        "Profilaxia.png",
-      ];
+  const isOpen = isMobile || activeTreatment === index;
 
   return (
                   <article
@@ -786,15 +856,26 @@ function App() {
                     tabIndex={0}
                     aria-expanded={isOpen}
                   >
+                    {/* as duas imagens ficam montadas e fazem crossfade
+                        (trocar o src no hover piscava) */}
                     <AssetImage
-                      fileName={currentImage}
-                      alt={treatment.title}
-                      fallbacks={imageFallbacks}
+                      fileName={treatment.image}
+                      alt=""
                       className="treatment-image parallax-media"
                       dataParallax
                       dataParallaxSpeed="0.06"
                       style={parallaxStyle("0px")}
                     />
+                    {treatment.expandedImage && (
+                      <AssetImage
+                        fileName={treatment.expandedImage}
+                        alt={treatment.title}
+                        className="treatment-image treatment-image-open parallax-media"
+                        dataParallax
+                        dataParallaxSpeed="0.06"
+                        style={parallaxStyle("0px")}
+                      />
+                    )}
 
                     <div className="treatment-shade" />
 
@@ -845,7 +926,6 @@ function App() {
                     dataParallax
                     dataParallaxSpeed="0.09"
                     style={parallaxStyle("0px")}
-                    fallbacks={step.fallbacks}
                   />
                 </div>
 
@@ -864,12 +944,7 @@ function App() {
 
           <section className="beauty-section" data-reveal>
             <div className="beauty-image-wrapper">
-              <AssetImage
-                fileName="FuncaoGeraBeleza.png"
-                alt="Composição visual com o conceito Função gera beleza"
-                className="beauty-image"
-                loading="eager"
-              />
+              <BeautyDots />
 
               <h2>Função gera beleza.</h2>
             </div>
@@ -905,25 +980,23 @@ function App() {
             <div className="editorial-duo-inner">
               <div className="editorial-duo-gray" data-reveal>
                 <AssetImage
-                  fileName="ImgCinza.png"
+                  fileName="editorial-cinza.webp"
                   alt="Detalhe editorial em preto e branco"
                   className="parallax-media"
                   dataParallax
                   dataParallaxSpeed="0.07"
                   style={parallaxStyle("0px")}
-                  fallbacks={["IMG_12583.JPG", "IMG_8457.JPG"]}
                 />
               </div>
 
               <div className="editorial-duo-color" data-reveal>
                 <AssetImage
-                  fileName="ImgColorida.png"
+                  fileName="editorial-colorida.webp"
                   alt="Dra. Caiane Petry em ambiente clínico"
                   className="parallax-media"
                   dataParallax
                   dataParallaxSpeed="0.1"
                   style={parallaxStyle("0px")}
-                  fallbacks={["IMG_12584.JPG", "IMG_12602.JPG"]}
                 />
               </div>
             </div>
@@ -941,16 +1014,14 @@ function App() {
               </p>
             </div>
 
-            <div className="clinic-location-image">
+            <div className="clinic-location-image" data-reveal>
               <AssetImage
-                fileName="IMG_8455.png"
+                fileName="consultorio.webp"
                 alt="Ambiente do consultório da Dra. Caiane Petry"
                 className="parallax-media"
                 dataParallax
                 dataParallaxSpeed="0.08"
                 style={parallaxStyle("0px")}
-                fallbacks={["IMG_12602.JPG"]}
-                dataReveal
               />
             </div>
           </section>
@@ -965,8 +1036,7 @@ function App() {
                 </h2>
                 <p>
                   Cada sorriso tem uma história e um caminho próprio. Agende sua
-                  avaliação e
-                  <br />
+                  avaliação e <br className="br-wide" />
                   descubra o que pode ser preservado, desenvolvido ou aprimorado
                   no seu.
                 </p>
@@ -986,7 +1056,7 @@ function App() {
                 aria-hidden="true"
               >
                 <AssetImage
-                  fileName="VamosComecarPeloDiagnostico_Homem.png"
+                  fileName="cta-homem.webp"
                   alt=""
                   className="parallax-media"
                   dataParallax
@@ -1001,7 +1071,7 @@ function App() {
                 aria-hidden="true"
               >
                 <AssetImage
-                  fileName="VamosComecarPeloDiagnostico_Adolescente.png"
+                  fileName="cta-adolescente.webp"
                   alt=""
                   className="parallax-media"
                   dataParallax
@@ -1016,7 +1086,7 @@ function App() {
                 aria-hidden="true"
               >
                 <AssetImage
-                  fileName="VamosComecarPeloDiagnostico_Mulher.png"
+                  fileName="cta-mulher.webp"
                   alt=""
                   className="parallax-media"
                   dataParallax
@@ -1031,7 +1101,7 @@ function App() {
                 aria-hidden="true"
               >
                 <AssetImage
-                  fileName="VamosComecarPeloDiagnostico_Crianca.png"
+                  fileName="cta-crianca.webp"
                   alt=""
                   className="parallax-media"
                   dataParallax
@@ -1053,27 +1123,19 @@ function App() {
 
             <div className="blog-grid" data-reveal>
               {blogPosts.map((post) => (
-                <article className="blog-card" key={post.category}>
-                  <div className="blog-card-image">
-                    <AssetImage
-                      fileName={post.image}
-                      alt={post.category}
-                      className="parallax-media"
-                      dataParallax
-                      dataParallaxSpeed="0.06"
-                      style={parallaxStyle("0px")}
-                    />
-                  </div>
-                  <span className="blog-card-category">{post.category}</span>
-                </article>
+                <BlogCard
+                  key={post.category}
+                  post={post}
+                  onNavigate={navigateTo}
+                />
               ))}
             </div>
 
             <div className="blog-actions" data-reveal>
               <a
                 className="button blog-all-button"
-                href="#blog"
-                onClick={(event) => navigateToHomeSection("#blog", event)}
+                href="/blog"
+                onClick={(event) => navigateTo("/blog", event)}
               >
                 Ver Todos os Artigos
               </a>
@@ -1085,6 +1147,7 @@ function App() {
       <Footer
         currentPage={currentPage}
         onNavigateSection={navigateToHomeSection}
+        onNavigate={navigateTo}
         onOpenPrivacyPolicy={openPrivacyPolicy}
       />
 
@@ -1095,12 +1158,7 @@ function App() {
         rel="noreferrer"
         aria-label="Falar pelo WhatsApp"
       >
-        <AssetImage
-          fileName="BotaoWhats.png"
-          alt="WhatsApp"
-          className="whatsapp-float-icon"
-          loading="eager"
-        />
+        <WhatsAppButtonIcon className="whatsapp-float-icon" />
       </a>
 
       <Cookies onOpenPrivacyPolicy={openPrivacyPolicy} />
