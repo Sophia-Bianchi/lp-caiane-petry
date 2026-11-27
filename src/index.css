@@ -264,7 +264,7 @@ a {
       rgba(255, 252, 249, 0.08) 88%,
       var(--cream) 100%
     ),
-    url("/assets/BannerDesktop.png");
+    url("/img/hero-desktop.webp");
   background-repeat: no-repeat;
   background-position: center top;
   background-size: 1440px 768px;
@@ -979,7 +979,7 @@ a {
         rgba(255, 252, 249, 0.7) 45%,
         var(--cream) 100%
       ),
-      url("/assets/BannerMobile.png");
+      url("/img/hero-mobile.webp");
     background-position: center top;
     background-size: cover;
   }

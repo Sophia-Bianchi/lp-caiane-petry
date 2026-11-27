@@ -1,0 +1,422 @@
+/* =========================================================
+   /interactions — camada extra de motion (só com html[data-motion="plus"])
+   Curvas: entrada cubic-bezier(.16,1,.3,1) · hover cubic-bezier(.65,0,.35,1)
+   ========================================================= */
+
+/* ---------- Entrada (método Carrera) ---------- */
+
+.entrada-plus {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.entrada-plus-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #4d5359;
+  transition: opacity var(--overlay-out, 650ms) ease 0.25s;
+}
+
+/* o degradê da tela de abertura do Figma, renderizado (sem bolas de borda
+   dura); respira devagar enquanto a marca se monta */
+.entrada-plus-bg::before {
+  content: "";
+  position: absolute;
+  inset: -6%;
+  background: url("/img/abertura-fundo.webp") center / cover no-repeat;
+  animation: ep-bg-breathe 3.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes ep-bg-breathe {
+  from {
+    transform: scale(1.12) translate3d(1.5%, 1%, 0);
+  }
+  to {
+    transform: none;
+  }
+}
+
+.entrada-plus.is-exiting .entrada-plus-bg {
+  opacity: 0;
+}
+
+/* Medidas do frame de abertura do Figma (1440 × 768), em cqw do bloco:
+   o bloco tem a largura do nome (503,65px) e 1cqw = 5,0365px.
+   nome → frase: 46,9px · frase → símbolo: 91px · símbolo 83,52 × 53,3
+   FUNCTION em x 27,2 · símbolo em x 208,8 · HARMONY em x 344,9 */
+.entrada-plus-content {
+  position: relative;
+  z-index: 2;
+  width: min(503.652px, calc(100vw - 56px));
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #f6ede4;
+}
+
+.entrada-plus-title {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+}
+
+/* cada letra sobe da máscara (o próprio desenho do SVG recorta) */
+.entrada-plus-title path {
+  transform-box: fill-box;
+  transform: translate3d(0, 115%, 0);
+  transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: calc(var(--i, 0) * 45ms);
+}
+
+.entrada-plus-title.is-in path {
+  transform: none;
+}
+
+.entrada-plus-subtitle {
+  display: block;
+  width: 68.897cqw;
+  height: auto;
+  margin-top: 9.312cqw;
+}
+
+.ep-vline {
+  transform-box: fill-box;
+  transform: translate3d(0, 125%, 0);
+  transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: calc(var(--i, 0) * 120ms);
+}
+
+.entrada-plus-subtitle.is-in .ep-vline {
+  transform: none;
+}
+
+.entrada-plus-row {
+  position: relative;
+  width: 100%;
+  height: 10.583cqw;
+  margin-top: 18.068cqw;
+}
+
+.ep-pillar {
+  position: absolute;
+  top: 2.68cqw;
+  height: auto;
+  opacity: 0;
+  transition:
+    opacity 0.9s ease,
+    transform 1.1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ep-pillar-left {
+  left: 5.4cqw;
+  width: 26.663cqw;
+  transform: translate3d(5.5cqw, 0, 0);
+}
+
+.ep-pillar-right {
+  left: 68.48cqw;
+  width: 26.028cqw;
+  transform: translate3d(-5.5cqw, 0, 0);
+}
+
+.ep-pillar.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+.ep-mark {
+  position: absolute;
+  top: 0;
+  left: 41.457cqw;
+  width: 16.583cqw;
+  height: 10.583cqw;
+  color: #f6ede4;
+  transform-origin: center;
+}
+
+.ep-mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* as bolinhas giram para fora do desenho: sem máscara */
+  overflow: visible;
+}
+
+/* bolinhas do símbolo entram girando, uma a uma (ordem horária) */
+.ep-dots path {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  transform: rotate(-170deg) scale(0.5);
+  opacity: 0;
+  transition:
+    transform 1.5s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--i, 0) * 55ms),
+    opacity 0.7s ease calc(var(--i, 0) * 55ms);
+}
+
+.ep-mark.is-in .ep-dots path {
+  transform: none;
+  opacity: 1;
+}
+
+@keyframes ep-zoom-in {
+  from {
+    transform: scale(var(--zoom, 12));
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.entrada-plus.is-exiting .entrada-plus-title,
+.entrada-plus.is-exiting .entrada-plus-subtitle,
+.entrada-plus.is-exiting .ep-pillar {
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+
+/* ---------- Janela que abre no scroll ---------- */
+
+/* A moldura fica sempre no tamanho do Figma (alinhada com os blocos ao
+   lado); a foto é que desfaz o zoom dentro dela (transform 1.25 → 1) ao
+   entrar na tela. O translate é do parallax e o scale da foto é do hover:
+   cada um numa propriedade, ninguém briga. */
+
+/* com scroll-timeline nativo: CSS puro, no compositor */
+@keyframes win-zoom {
+  from {
+    transform: scale(1.25);
+  }
+  to {
+    transform: none;
+  }
+}
+
+[data-motion="plus"][data-scroll-fx="css"] :is(
+    .about-small-image,
+    .about-large-image,
+    .alignment-image,
+    .editorial-duo-gray,
+    .editorial-duo-color,
+    .clinic-location-image,
+    .diag-photo,
+    .blog-card-image
+  ) .parallax-media {
+  animation:
+    pm-parallax both linear,
+    win-zoom both cubic-bezier(0.5, 1, 0.89, 1);
+  animation-timeline: view(), view();
+  animation-range: cover 0% cover 100%, cover 0% cover 55vh;
+}
+
+[data-motion="plus"][data-scroll-fx="css"] :is(
+    .about-small-image,
+    .about-large-image,
+    .alignment-image,
+    .editorial-duo-gray,
+    .editorial-duo-color,
+    .clinic-location-image,
+    .diag-photo,
+    .blog-card-image
+  ) .parallax-media-contain {
+  animation-name: pm-parallax-soft, win-zoom;
+}
+
+/* sem scroll-timeline (ex.: Firefox): o JS escreve --win-k */
+[data-motion="plus"]:not([data-scroll-fx="css"]) :is(
+    .about-small-image,
+    .about-large-image,
+    .alignment-image,
+    .editorial-duo-gray,
+    .editorial-duo-color,
+    .clinic-location-image,
+    .diag-photo,
+    .blog-card-image
+  ) .parallax-media {
+  transform: scale(var(--win-k, 1));
+}
+
+/* a janela já é a entrada dessas fotos: o fade/subida genérico sai
+   (os dois juntos travavam no primeiro scroll do mobile) */
+[data-motion="plus"] :is(
+    .about-small-image,
+    .about-large-image,
+    .alignment-image,
+    .editorial-duo-gray,
+    .editorial-duo-color,
+    .clinic-location-image,
+    .diag-photo,
+    .blog-card-image
+  )[data-reveal] {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+/* ---------- Pilha do diagnóstico: o card coberto afunda ---------- */
+
+[data-motion="plus"] .diagnosis-stack-card {
+  --sink: 0;
+  transform: scale(calc(1 - var(--sink) * 0.08));
+  transform-origin: 50% 0;
+}
+
+[data-motion="plus"] .diagnosis-stack-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: #121820;
+  opacity: calc(var(--sink) * 0.45);
+  pointer-events: none;
+}
+
+/* ---------- Listas com foco (deslize) ---------- */
+
+[data-motion="plus"] .differential-row,
+[data-motion="plus"] .formation-row {
+  --focus: 0;
+}
+
+/* as cores ficam as aprovadas no Figma; só o texto desliza ao entrar em foco */
+[data-motion="plus"] .differential-row > span:last-child,
+[data-motion="plus"] .formation-title {
+  transform: translate3d(calc(var(--focus) * 10px), 0, 0);
+}
+
+/* ---------- Frase-manifesto acende no scroll ---------- */
+
+[data-motion="plus"] .process-intro h2 .tw-i {
+  transform: none !important;
+  opacity: 0.14;
+  transition: opacity 0.15s linear;
+}
+
+[data-motion="plus"] .process-intro {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* ---------- Hero: texto sobe e some mais rápido que a página ---------- */
+
+@keyframes hero-out {
+  to {
+    translate: 0 -90px;
+    opacity: 0.1;
+  }
+}
+
+[data-motion="plus"][data-scroll-fx="css"] .hero-content {
+  animation: hero-out linear both;
+  animation-timeline: scroll(root);
+  animation-range: 0px 80vh;
+}
+
+/* ---------- Header some ao descer ---------- */
+
+[data-motion="plus"] .site-header {
+  transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+[data-motion="plus"] .site-header[data-hidden="true"] {
+  transform: translate3d(0, -100%, 0);
+}
+
+/* ---------- Botões com preenchimento ---------- */
+
+[data-motion="plus"] .button {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    color 0.6s cubic-bezier(0.65, 0, 0.35, 1),
+    border-color 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+[data-motion="plus"] .button:hover {
+  transform: none;
+}
+
+[data-motion="plus"] .button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--blue);
+  transform: scaleY(0);
+  transform-origin: 50% 100%;
+  transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+[data-motion="plus"] .button:hover::before {
+  transform: scaleY(1);
+}
+
+[data-motion="plus"] .button-outline:hover,
+[data-motion="plus"] .start-diagnosis-button:hover,
+[data-motion="plus"] .blog-all-button:hover {
+  background: transparent;
+  color: var(--light);
+}
+
+/* botão escuro: o preenchimento é claro e o texto escurece */
+[data-motion="plus"] .button-dark::before {
+  background: var(--light);
+}
+
+[data-motion="plus"] .button-dark:hover,
+[data-motion="plus"] .header-cta:hover {
+  background: var(--blue);
+  color: var(--blue);
+  opacity: 1;
+}
+
+/* ---------- Cursor "Ver" ---------- */
+
+.plus-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2500;
+  width: 84px;
+  height: 84px;
+  margin: -42px 0 0 -42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 252, 249, 0.92);
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  pointer-events: none;
+  scale: 0;
+  transition: scale 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(6px);
+}
+
+.plus-cursor[data-on="true"] {
+  scale: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plus-cursor {
+    display: none;
+  }
+}
